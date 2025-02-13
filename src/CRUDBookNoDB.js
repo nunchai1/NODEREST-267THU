@@ -10,7 +10,7 @@ const app = express();
 // parse incoming requests
 app.use(express.json());
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.send('Welcome to wanimol ')
 });
 
