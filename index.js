@@ -1,7 +1,13 @@
 // CRUDBookSQLite.js
 
+// SQLite3 CRUD operations
+// npm install sqlite3
+// Create a Book.sqlite file in Database folder
+// Run this file with node CRUDBookSQLite.js
+// Test with Postman
+
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3');
 const app = express();
 
 app.use(express.json());
@@ -9,7 +15,7 @@ app.use(express.json());
 // Connect to database
 const db = new sqlite3.Database('./Database/Book.sqlite');
 
-// Create table if not exists
+// Create books table if it doesn't exist
 db.run(`CREATE TABLE IF NOT EXISTS books (
     id INTEGER PRIMARY KEY,
     title TEXT,
@@ -32,10 +38,10 @@ app.get('/books/:id', (req, res) => {
     db.get('SELECT * FROM books WHERE id = ?', req.params.id, (err, row) => {
         if (err) {
             res.status(500).send(err);
-        } else if (row) {
-            res.json(row);
-        } else {
+        } else if (!row) {
             res.status(404).send('Book not found');
+        } else {
+            res.json(row);
         }
     });
 });
@@ -43,36 +49,37 @@ app.get('/books/:id', (req, res) => {
 // Route to create a new book
 app.post('/books', (req, res) => {
     const book = req.body;
-    db.run('INSERT INTO books (title, author) VALUES (?, ?)', 
-        [book.title, book.author], function(err) {
-        if (err) {
-            res.status(500).send(err);
-        } else {
-            res.json({ id: this.lastID });
-        }
-    });
+    db.run('INSERT INTO books (title, author) VALUES (?, ?)',
+        book.title, book.author, function (err) {
+            if (err) {
+                res.status(500).send(err);
+            } else {
+                book.id = this.lastID;
+                res.send(book);
+            }
+        });
 });
 
 // Route to update a book
 app.put('/books/:id', (req, res) => {
     const book = req.body;
-    db.run('UPDATE books SET title = ?, author = ? WHERE id = ?', 
-        [book.title, book.author, req.params.id], function(err) {
-        if (err) {
-            res.status(500).send(err);
-        } else {
-            res.send('Book updated');
-        }
-    });
+    db.run('UPDATE books SET title = ?, author = ? WHERE id = ?',
+        book.title, book.author, req.params.id, function (err) {
+            if (err) {
+                res.status(500).send(err);
+            } else {
+                res.send(book);
+            }
+        });
 });
 
 // Route to delete a book
 app.delete('/books/:id', (req, res) => {
-    db.run('DELETE FROM books WHERE id = ?', req.params.id, function(err) {
+    db.run('DELETE FROM books WHERE id = ?', req.params.id, function (err) {
         if (err) {
             res.status(500).send(err);
         } else {
-            res.send('Book deleted');
+            res.send({});
         }
     });
 });
