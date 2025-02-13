@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 
 // Connect to database
-const db = new sqlite3.Database('./Database/Book.sqlite');
+const db = new sqlite3.Database('./Database/Books.sqlite');
 
 // Create books table if it doesn't exist
 db.run(`CREATE TABLE IF NOT EXISTS books (
@@ -84,5 +84,5 @@ app.delete('/books/:id', (req, res) => {
     });
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5500;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
