@@ -1,88 +1,106 @@
-// CRUDBookSQLite.js
-
-// SQLite3 CRUD operations
-// npm install sqlite3
-// Create a Book.sqlite file in Database folder
-// Run this file with node CRUDBookSQLite.js
-// Test with Postman
-
 const express = require('express');
-const sqlite3 = require('sqlite3');
+const { Sequelize, DataTypes } = require('sequelize');
 const app = express();
 
 app.use(express.json());
 
-// Connect to database
-const db = new sqlite3.Database('./Database/Books.sqlite');
+// เชื่อมต่อฐานข้อมูล SQLite
+const sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: './Database/SQBooks.sqlite'
+});
 
-// Create books table if it doesn't exist
-db.run(`CREATE TABLE IF NOT EXISTS books (
-    id INTEGER PRIMARY KEY,
-    title TEXT,
-    author TEXT
-)`);
+// กำหนด Model หนังสือ
+const Book = sequelize.define('book', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+    },
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    author: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+});
 
-// Route to get all books
-app.get('/books', (req, res) => {
-    db.all('SELECT * FROM books', (err, rows) => {
-        if (err) {
-            res.status(500).send(err);
-        } else {
-            res.json(rows);
+// สร้างตาราง
+sequelize.sync({ force: false }); // ทำให้ไม่ลบข้อมูลเก่า
+
+// ดึงข้อมูลหนังสือทั้งหมด
+app.get('/books', async (req, res) => {
+    try {
+        const books = await Book.findAll();
+        res.json(books);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error while fetching books');
+    }
+});
+
+// ดึงข้อมูลหนังสือจาก ID
+app.get('/books/:id', async (req, res) => {
+    try {
+        const book = await Book.findByPk(req.params.id);
+        if (!book) {
+            return res.status(404).send('Book not found');
         }
-    });
+        res.json(book);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error while fetching the book');
+    }
 });
 
-// Route to get a book by id
-app.get('/books/:id', (req, res) => {
-    db.get('SELECT * FROM books WHERE id = ?', req.params.id, (err, row) => {
-        if (err) {
-            res.status(500).send(err);
-        } else if (!row) {
-            res.status(404).send('Book not found');
-        } else {
-            res.json(row);
+// สร้างหนังสือใหม่
+app.post('/books', async (req, res) => {
+    const { title, author } = req.body;
+    if (!title || !author) {
+        return res.status(400).send('Title and author are required');
+    }
+    try {
+        const book = await Book.create(req.body);
+        res.json(book);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error while creating the book');
+    }
+});
+
+// อัปเดตข้อมูลหนังสือ
+app.put('/books/:id', async (req, res) => {
+    try {
+        const book = await Book.findByPk(req.params.id);
+        if (!book) {
+            return res.status(404).send('Book not found');
         }
-    });
+        await book.update(req.body);
+        res.json(book);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error while updating the book');
+    }
 });
 
-// Route to create a new book
-app.post('/books', (req, res) => {
-    const book = req.body;
-    db.run('INSERT INTO books (title, author) VALUES (?, ?)',
-        book.title, book.author, function (err) {
-            if (err) {
-                res.status(500).send(err);
-            } else {
-                book.id = this.lastID;
-                res.send(book);
-            }
-        });
-});
-
-// Route to update a book
-app.put('/books/:id', (req, res) => {
-    const book = req.body;
-    db.run('UPDATE books SET title = ?, author = ? WHERE id = ?',
-        book.title, book.author, req.params.id, function (err) {
-            if (err) {
-                res.status(500).send(err);
-            } else {
-                res.send(book);
-            }
-        });
-});
-
-// Route to delete a book
-app.delete('/books/:id', (req, res) => {
-    db.run('DELETE FROM books WHERE id = ?', req.params.id, function (err) {
-        if (err) {
-            res.status(500).send(err);
-        } else {
-            res.send({});
+// ลบหนังสือ
+app.delete('/books/:id', async (req, res) => {
+    try {
+        const book = await Book.findByPk(req.params.id);
+        if (!book) {
+            return res.status(404).send('Book not found');
         }
-    });
+        await book.destroy();
+        res.send({ message: 'Book deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error while deleting the book');
+    }
 });
 
-const port = process.env.PORT || 5500;
+// เริ่มเซิร์ฟเวอร์
+const port = process.env.PORT || 3001;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
+
